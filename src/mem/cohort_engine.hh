@@ -182,6 +182,12 @@ class CohortEngine : public AbstractMemory
      */
     std::unique_ptr<Packet> pendingDelete;
 
+    /**
+     * The port used to read from the shared memory queue
+     */
+    RequestPort memPort;
+
+
   public:
 
     CohortEngine(const CohortEngineParams &p);
@@ -199,7 +205,9 @@ class CohortEngine : public AbstractMemory
     void recvMemBackdoorReq(const MemBackdoorReq &req,
             MemBackdoorPtr &backdoor);
     bool recvTimingReq(PacketPtr pkt);
+    bool recvTimingResp(PacketPtr pkt);
     void recvRespRetry();
+    PacketPtr buildReadRequest(Addr addr, unsigned size);
 };
 
 } // namespace memory

@@ -56,7 +56,8 @@ CohortEngine::CohortEngine(const CohortEngineParams &p) :
     latency_var(p.latency_var), bandwidth(p.bandwidth), isBusy(false),
     retryReq(false), retryResp(false),
     releaseEvent([this]{ release(); }, name()),
-    dequeueEvent([this]{ dequeue(); }, name())
+    dequeueEvent([this]{ dequeue(); }, name()),
+    memPort(name() + ".mem_port", this)
 {
 }
 
@@ -69,6 +70,18 @@ CohortEngine::init()
     // systems at the moment
     if (port.isConnected()) {
         port.sendRangeChange();
+    }
+
+    // Create a memory request to QUEUE_ADDR
+    Addr queueAddr = 0x40001000;
+    unsigned size = 8; // bytes (uint64_t)
+
+    auto pkt = buildReadRequest(queueAddr, size);
+
+    // Try to send it
+    if (!memPort.sendTimingReq(pkt)) {
+        warn("Could not send queue read request.");
+        // Handle retry if necessary
     }
 }
 
@@ -116,7 +129,7 @@ CohortEngine::recvMemBackdoorReq(const MemBackdoorReq &req,
 }
 
 bool
-CohortEngine::recvTimingReq(PacketPtr pkt)
+SimpleMemory::recvTimingReq(PacketPtr pkt)
 {
     panic_if(pkt->cacheResponding(), "Should not see packets where cache "
              "is responding");
@@ -196,6 +209,19 @@ CohortEngine::recvTimingReq(PacketPtr pkt)
 
     return true;
 }
+
+bool
+CohortEngine::recvTimingResp(PacketPtr pkt)
+{
+    uint64_t val = pkt->getLE<uint64_t>();
+    DPRINTF(Cohort, "CohortEngine received value from queue: %lu\n", val);
+
+    // You could simulate processing here
+    delete pkt;
+    return true;
+}
+
+
 
 void
 CohortEngine::release()
@@ -319,6 +345,19 @@ CohortEngine::MemoryPort::recvRespRetry()
 {
     mem.recvRespRetry();
 }
+
+PacketPtr
+CohortEngine::buildReadRequest(Addr addr, unsigned size)
+{
+    RequestPtr req = std::make_shared<Request>(
+        addr, size, Request::UNCACHEABLE, requestorId());
+
+    req->setContext(0);  // Optional
+    PacketPtr pkt = new Packet(req, MemCmd::ReadReq);
+    pkt->allocate();
+    return pkt;
+}
+
 
 } // namespace memory
 } // namespace gem5

@@ -8,6 +8,7 @@ class CohortEngine(AbstractMemory):
     cxx_class = "gem5::memory::CohortEngine"
 
     port = ResponsePort("This port sends responses and receives requests")
+    mem_port = RequestPort("Used to send memory requests")
     latency = Param.Latency("30ns", "Request to response latency")
     latency_var = Param.Latency("0ns", "Request to response latency variance")
     # The memory bandwidth limit default is set to 12.8GiB/s which is
