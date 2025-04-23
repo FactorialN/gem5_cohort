@@ -56,8 +56,7 @@ CohortEngine::CohortEngine(const CohortEngineParams &p) :
     latency_var(p.latency_var), bandwidth(p.bandwidth), isBusy(false),
     retryReq(false), retryResp(false),
     releaseEvent([this]{ release(); }, name()),
-    dequeueEvent([this]{ dequeue(); }, name()),
-    memPort(name() + ".mem_port", this)
+    dequeueEvent([this]{ dequeue(); }, name())
 {
 }
 
@@ -79,7 +78,7 @@ CohortEngine::init()
     auto pkt = buildReadRequest(queueAddr, size);
 
     // Try to send it
-    if (!memPort.sendTimingReq(pkt)) {
+    if (!port.sendTimingReq(pkt)) {
         warn("Could not send queue read request.");
         // Handle retry if necessary
     }
@@ -129,7 +128,7 @@ CohortEngine::recvMemBackdoorReq(const MemBackdoorReq &req,
 }
 
 bool
-SimpleMemory::recvTimingReq(PacketPtr pkt)
+CohortEngine::recvTimingReq(PacketPtr pkt)
 {
     panic_if(pkt->cacheResponding(), "Should not see packets where cache "
              "is responding");
@@ -299,6 +298,7 @@ CohortEngine::MemoryPort::MemoryPort(const std::string& _name,
                                      CohortEngine& _memory)
     : ResponsePort(_name), mem(_memory)
 { }
+
 
 AddrRangeList
 CohortEngine::MemoryPort::getAddrRanges() const

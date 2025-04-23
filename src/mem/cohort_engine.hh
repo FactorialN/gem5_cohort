@@ -86,7 +86,7 @@ class CohortEngine : public AbstractMemory
         { }
     };
 
-    class MemoryPort : public ResponsePort
+    class MemoryPort : public RequestPort
     {
       private:
         CohortEngine& mem;
@@ -182,10 +182,6 @@ class CohortEngine : public AbstractMemory
      */
     std::unique_ptr<Packet> pendingDelete;
 
-    /**
-     * The port used to read from the shared memory queue
-     */
-    RequestPort memPort;
 
 
   public:
