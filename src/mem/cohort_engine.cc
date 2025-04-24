@@ -62,6 +62,7 @@ CohortEngine::CohortEngine(const CohortEngineParams &p) :
     dequeueEvent([this]{ dequeue(); }, name()),
     req_port(name() + ".mem_port", *this)
 {
+    pollEvent = EventFunctionWrapper([this]{ pollQueue(); }, name());
 }
 
 void
@@ -76,10 +77,9 @@ CohortEngine::init()
     }
 
     // Create a memory request to QUEUE_ADDR
-    Addr queueAddr = 0x40001000;
-    unsigned size = 8; // bytes (uint64_t)
+    queueBaseAddr = 0x80001000;
 
-    auto pkt = buildReadRequest(queueAddr, size);
+    auto pkt = buildReadRequest(queueBaseAddr, queueEntrySize);
 
     // Try to send it
     if (!req_port.sendTimingReq(pkt)) {
@@ -227,6 +227,31 @@ CohortEngine::recvTimingResp(PacketPtr pkt)
     return true;
 }
 
+void
+CohortEngine::pollQueue()
+{
+    if (headIndex >= queueLength)
+        headIndex = 0;
+
+    Addr entryAddr = queueBaseAddr + headIndex * queueEntrySize;
+
+    // Build and send memory read request
+    RequestPtr req = std::make_shared<Request>(
+        entryAddr, queueEntrySize, Request::UNCACHEABLE, requestorId);
+    PacketPtr pkt = new Packet(req, MemCmd::ReadReq);
+    pkt->allocate();
+
+    if (!req_port.sendTimingReq(pkt)) {
+        retryPkt = pkt;
+        return;
+    }
+
+    // Next time we poll, advance head
+    headIndex++;
+
+    // Reschedule next polling event
+    schedule(pollEvent, curTick() + pollingInterval);
+}
 
 
 void

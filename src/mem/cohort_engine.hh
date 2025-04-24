@@ -205,6 +205,14 @@ class CohortEngine : public AbstractMemory
 
     PacketPtr retryPkt = nullptr;
 
+    // queue parameters
+    Addr queueBaseAddr = 0;
+    unsigned queueEntrySize = sizeof(uint64_t);
+    unsigned queueLength = 64;
+    unsigned headIndex = 0;
+    EventFunctionWrapper pollEvent;
+    Tick pollingInterval = 10000;
+
 
   public:
 
