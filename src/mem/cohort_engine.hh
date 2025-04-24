@@ -86,7 +86,7 @@ class CohortEngine : public AbstractMemory
         { }
     };
 
-    class MemoryPort : public RequestPort
+    class MemoryPort : public ResponsePort
     {
       private:
         CohortEngine& mem;
@@ -106,7 +106,7 @@ class CohortEngine : public AbstractMemory
         AddrRangeList getAddrRanges() const override;
     };
 
-    MemoryPort port;
+    MemoryPort res_port;
 
     /**
      * Latency from that a request is accepted until the response is
@@ -182,6 +182,28 @@ class CohortEngine : public AbstractMemory
      */
     std::unique_ptr<Packet> pendingDelete;
 
+    /**
+     * The port used to read from the shared memory queue
+     */
+    class RequestQueuePort : public RequestPort
+    {
+      private:
+        CohortEngine &owner;
+
+      public:
+        RequestQueuePort(const std::string &name, CohortEngine &owner);
+
+        // implement the two required methods
+        bool recvTimingResp(PacketPtr pkt) override;
+        void recvReqRetry() override;
+    };
+
+    RequestQueuePort req_port;
+
+    /** Request id for all generated traffic */
+    RequestorID requestorId;
+
+    PacketPtr retryPkt = nullptr;
 
 
   public:
@@ -203,6 +225,7 @@ class CohortEngine : public AbstractMemory
     bool recvTimingReq(PacketPtr pkt);
     bool recvTimingResp(PacketPtr pkt);
     void recvRespRetry();
+    void recvReqRetry();  // For memory request retry handling
     PacketPtr buildReadRequest(Addr addr, unsigned size);
 };
 

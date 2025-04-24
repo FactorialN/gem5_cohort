@@ -43,6 +43,9 @@
 #include "base/random.hh"
 #include "base/trace.hh"
 #include "debug/Drain.hh"
+#include "sim/system.hh"
+#include "mem/packet_access.hh" 
+
 
 namespace gem5
 {
@@ -52,11 +55,12 @@ namespace memory
 
 CohortEngine::CohortEngine(const CohortEngineParams &p) :
     AbstractMemory(p),
-    port(name() + ".port", *this), latency(p.latency),
+    res_port(name() + ".port", *this), latency(p.latency),
     latency_var(p.latency_var), bandwidth(p.bandwidth), isBusy(false),
     retryReq(false), retryResp(false),
     releaseEvent([this]{ release(); }, name()),
-    dequeueEvent([this]{ dequeue(); }, name())
+    dequeueEvent([this]{ dequeue(); }, name()),
+    req_port(name() + ".mem_port", *this)
 {
 }
 
@@ -67,8 +71,8 @@ CohortEngine::init()
 
     // allow unconnected memories as this is used in several ruby
     // systems at the moment
-    if (port.isConnected()) {
-        port.sendRangeChange();
+    if (res_port.isConnected()) {
+        res_port.sendRangeChange();
     }
 
     // Create a memory request to QUEUE_ADDR
@@ -78,10 +82,13 @@ CohortEngine::init()
     auto pkt = buildReadRequest(queueAddr, size);
 
     // Try to send it
-    if (!port.sendTimingReq(pkt)) {
+    if (!req_port.sendTimingReq(pkt)) {
+        retryPkt = pkt;
         warn("Could not send queue read request.");
         // Handle retry if necessary
     }
+
+    requestorId = system()->getRequestorId(this, "cohort_engine");
 }
 
 Tick
@@ -213,7 +220,7 @@ bool
 CohortEngine::recvTimingResp(PacketPtr pkt)
 {
     uint64_t val = pkt->getLE<uint64_t>();
-    DPRINTF(Cohort, "CohortEngine received value from queue: %lu\n", val);
+    //DPRINTF(Cohort, "CohortEngine received value from queue: %lu\n", val);
 
     // You could simulate processing here
     delete pkt;
@@ -229,7 +236,7 @@ CohortEngine::release()
     isBusy = false;
     if (retryReq) {
         retryReq = false;
-        port.sendRetryReq();
+        res_port.sendRetryReq();
     }
 }
 
@@ -239,7 +246,7 @@ CohortEngine::dequeue()
     assert(!packetQueue.empty());
     DeferredPacket deferred_pkt = packetQueue.front();
 
-    retryResp = !port.sendTimingResp(deferred_pkt.pkt);
+    retryResp = !res_port.sendTimingResp(deferred_pkt.pkt);
 
     if (!retryResp) {
         packetQueue.pop_front();
@@ -279,7 +286,7 @@ CohortEngine::getPort(const std::string &if_name, PortID idx)
     if (if_name != "port") {
         return AbstractMemory::getPort(if_name, idx);
     } else {
-        return port;
+        return res_port;
     }
 }
 
@@ -298,6 +305,24 @@ CohortEngine::MemoryPort::MemoryPort(const std::string& _name,
                                      CohortEngine& _memory)
     : ResponsePort(_name), mem(_memory)
 { }
+
+CohortEngine::RequestQueuePort::RequestQueuePort(
+    const std::string &name, CohortEngine &owner)
+    : RequestPort(name), owner(owner)
+{ }
+
+bool
+CohortEngine::RequestQueuePort::recvTimingResp(PacketPtr pkt)
+{
+    return owner.recvTimingResp(pkt);
+}
+
+void
+CohortEngine::RequestQueuePort::recvReqRetry()
+{
+    owner.recvReqRetry();
+}
+
 
 
 AddrRangeList
@@ -350,13 +375,31 @@ PacketPtr
 CohortEngine::buildReadRequest(Addr addr, unsigned size)
 {
     RequestPtr req = std::make_shared<Request>(
-        addr, size, Request::UNCACHEABLE, requestorId());
+        addr, size, Request::UNCACHEABLE, requestorId);
 
     req->setContext(0);  // Optional
     PacketPtr pkt = new Packet(req, MemCmd::ReadReq);
     pkt->allocate();
     return pkt;
 }
+
+void
+CohortEngine::recvReqRetry()
+{
+    // If you're using a retry queue or retrying reads, do it here.
+    // For now, just print/log that the port is ready to retry.
+    //DPRINTF(Debug, "CohortEngine: req_port can now retry.\n");
+
+    // Example: retry the last request if you stored it
+    if (retryPkt) {
+        if (req_port.sendTimingReq(retryPkt)) {
+            retryPkt = nullptr;
+        } else {
+            //DPRINTF(Debug, "Retry still failed.\n");
+        }
+    }
+}
+
 
 
 } // namespace memory
