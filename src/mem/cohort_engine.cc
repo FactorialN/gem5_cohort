@@ -60,9 +60,10 @@ CohortEngine::CohortEngine(const CohortEngineParams &p) :
     retryReq(false), retryResp(false),
     releaseEvent([this]{ release(); }, name()),
     dequeueEvent([this]{ dequeue(); }, name()),
-    req_port(name() + ".mem_port", *this)
+    req_port(name() + ".mem_port", *this),
+    pollEvent([this]{ pollQueue(); }, name())
 {
-    pollEvent = EventFunctionWrapper([this]{ pollQueue(); }, name());
+    
 }
 
 void
