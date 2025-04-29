@@ -217,6 +217,7 @@ CohortEngine::recvTimingReq(PacketPtr pkt)
     return true;
 }
 
+
 bool
 CohortEngine::recvTimingResp(PacketPtr pkt)
 {
@@ -224,6 +225,18 @@ CohortEngine::recvTimingResp(PacketPtr pkt)
     //DPRINTF(Cohort, "CohortEngine received value from queue: %lu\n", val);
 
     // You could simulate processing here
+    if (val == 0) {
+        //DPRINTF(Cohort, "Queue is empty.\n");
+    } else {
+        //DPRINTF(Cohort, "Queue has data: %lu\n", val);
+
+        // 🟢 PROCESS WORK ITEM
+        // processEntry(val);
+
+        // 🟢 (Optional) Mark slot as empty
+        // clearQueueSlot(currentEntryAddress);
+    }
+
     delete pkt;
     return true;
 }
