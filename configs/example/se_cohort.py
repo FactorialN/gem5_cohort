@@ -39,8 +39,8 @@ system.mem_ctrl.port = system.membus.mem_side_ports
 
 # 🛠️ Insert your Cohort Engine
 cohort = CohortEngine()
-cohort.queueBaseAddr = 0x80001000
-cohort.mem_port = system.membus.mem_side_ports
+cohort.queueBaseAddr = 0x90000000
+cohort.mem_port = system.membus.cpu_side_ports
 system.cohort = cohort
 
 # Interrupt controller for SE mode (not full system)

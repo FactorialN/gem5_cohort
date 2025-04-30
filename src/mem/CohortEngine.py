@@ -17,7 +17,7 @@ class CohortEngine(AbstractMemory):
         "12.8GiB/s", "Combined read and write bandwidth"
     )
 
-    queueBaseAddr = Param.Addr(0x80001000, "Base address of the memory-backed queue")
+    queueBaseAddr = Param.Addr(0x90000000, "Base address of the memory-backed queue")
 
     def controller(self):
         # cohort engine doesn't use a MemCtrl

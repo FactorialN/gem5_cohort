@@ -78,7 +78,7 @@ CohortEngine::init()
     }
 
     // Create a memory request to QUEUE_ADDR
-    queueBaseAddr = 0x80001000;
+    queueBaseAddr = 0x90000000;
 
     auto pkt = buildReadRequest(queueBaseAddr, queueEntrySize);
 
@@ -421,6 +421,8 @@ CohortEngine::buildReadRequest(Addr addr, unsigned size)
     pkt->allocate();
     return pkt;
 }
+
+
 
 void
 CohortEngine::recvReqRetry()

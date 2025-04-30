@@ -1,7 +1,7 @@
 // test_cohort.c
 #include <stdint.h>
 
-#define QUEUE_ADDR 0x80001000
+#define QUEUE_ADDR 0x90000000
 
 int main() {
     volatile uint64_t *queue = (volatile uint64_t *)QUEUE_ADDR;
