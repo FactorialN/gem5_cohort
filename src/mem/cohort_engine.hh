@@ -236,6 +236,9 @@ class CohortEngine : public AbstractMemory
     void recvReqRetry();  // For memory request retry handling
     PacketPtr buildReadRequest(Addr addr, unsigned size);
     void pollQueue();
+    AddrRange getAddrRange() const;
+    void processEntry(uint64_t val);
+
 };
 
 } // namespace memory

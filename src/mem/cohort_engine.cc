@@ -217,6 +217,19 @@ CohortEngine::recvTimingReq(PacketPtr pkt)
     return true;
 }
 
+AddrRange
+CohortEngine::getAddrRange() const
+{
+    // Return a fake, unused, non-overlapping range (e.g., very high)
+    return AddrRange(0xFFFF0000, 0xFFFF0000 + 1);
+}
+
+void
+CohortEngine::processEntry(uint64_t val){
+    if (val == 42){
+        DPRINTF(Drain, "Task: Add fourty-two numbers\n");
+    }
+}
 
 bool
 CohortEngine::recvTimingResp(PacketPtr pkt)
@@ -231,7 +244,7 @@ CohortEngine::recvTimingResp(PacketPtr pkt)
         //DPRINTF(Cohort, "Queue has data: %lu\n", val);
 
         // 🟢 PROCESS WORK ITEM
-        // processEntry(val);
+        processEntry(val);
 
         // 🟢 (Optional) Mark slot as empty
         // clearQueueSlot(currentEntryAddress);
