@@ -1,5 +1,6 @@
 // test_cohort.c
 #include <stdint.h>
+#include <stddef.h>
 
 #define QUEUE_ADDR 0x90000000
 
