@@ -61,7 +61,8 @@ CohortEngine::CohortEngine(const CohortEngineParams &p) :
     releaseEvent([this]{ release(); }, name()),
     dequeueEvent([this]{ dequeue(); }, name()),
     req_port(name() + ".mem_port", *this),
-    pollEvent([this]{ pollQueue(); }, name())
+    pollEvent([this]{ pollQueue(); }, name()),
+    system(p.system)
 {
     
 }
@@ -89,51 +90,9 @@ CohortEngine::init()
         // Handle retry if necessary
     }
 
-    requestorId = p.system->getRequestorId(this, "cohort_engine");
+    requestorId = system->getRequestorId(this, "cohort_engine");
 }
 
-Tick
-CohortEngine::recvAtomic(PacketPtr pkt)
-{
-    panic_if(pkt->cacheResponding(), "Should not see packets where cache "
-             "is responding");
-
-    access(pkt);
-    return getLatency();
-}
-
-Tick
-CohortEngine::recvAtomicBackdoor(PacketPtr pkt, MemBackdoorPtr &_backdoor)
-{
-    Tick latency = recvAtomic(pkt);
-    getBackdoor(_backdoor);
-    return latency;
-}
-
-void
-CohortEngine::recvFunctional(PacketPtr pkt)
-{
-    pkt->pushLabel(name());
-
-    functionalAccess(pkt);
-
-    bool done = false;
-    auto p = packetQueue.begin();
-    // potentially update the packets in our packet queue as well
-    while (!done && p != packetQueue.end()) {
-        done = pkt->trySatisfyFunctional(p->pkt);
-        ++p;
-    }
-
-    pkt->popLabel();
-}
-
-void
-CohortEngine::recvMemBackdoorReq(const MemBackdoorReq &req,
-        MemBackdoorPtr &_backdoor)
-{
-    getBackdoor(_backdoor);
-}
 
 bool
 CohortEngine::recvTimingReq(PacketPtr pkt)
@@ -184,7 +143,7 @@ CohortEngine::recvTimingReq(PacketPtr pkt)
     // go ahead and deal with the packet and put the response in the
     // queue if there is one
     bool needsResponse = pkt->needsResponse();
-    recvAtomic(pkt);
+    //recvAtomic(pkt);
     // turn packet around to go back to requestor if response expected
     if (needsResponse) {
         // recvAtomic() should already have turned packet into
@@ -366,8 +325,6 @@ CohortEngine::RequestQueuePort::recvReqRetry()
     owner.recvReqRetry();
 }
 
-
-
 AddrRangeList
 CohortEngine::MemoryPort::getAddrRanges() const
 {
@@ -376,31 +333,7 @@ CohortEngine::MemoryPort::getAddrRanges() const
     return ranges;
 }
 
-Tick
-CohortEngine::MemoryPort::recvAtomic(PacketPtr pkt)
-{
-    return mem.recvAtomic(pkt);
-}
 
-Tick
-CohortEngine::MemoryPort::recvAtomicBackdoor(
-        PacketPtr pkt, MemBackdoorPtr &_backdoor)
-{
-    return mem.recvAtomicBackdoor(pkt, _backdoor);
-}
-
-void
-CohortEngine::MemoryPort::recvFunctional(PacketPtr pkt)
-{
-    mem.recvFunctional(pkt);
-}
-
-void
-CohortEngine::MemoryPort::recvMemBackdoorReq(const MemBackdoorReq &req,
-        MemBackdoorPtr &backdoor)
-{
-    mem.recvMemBackdoorReq(req, backdoor);
-}
 
 bool
 CohortEngine::MemoryPort::recvTimingReq(PacketPtr pkt)

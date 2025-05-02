@@ -95,15 +95,19 @@ class CohortEngine : public ClockedObject
         MemoryPort(const std::string& _name, CohortEngine& _memory);
 
       protected:
-        Tick recvAtomic(PacketPtr pkt) override;
-        Tick recvAtomicBackdoor(
-                PacketPtr pkt, MemBackdoorPtr &_backdoor) override;
-        void recvFunctional(PacketPtr pkt) override;
-        void recvMemBackdoorReq(const MemBackdoorReq &req,
-                MemBackdoorPtr &backdoor) override;
         bool recvTimingReq(PacketPtr pkt) override;
         void recvRespRetry() override;
         AddrRangeList getAddrRanges() const override;
+
+        Tick recvAtomic(PacketPtr pkt) override {
+          panic("CohortEngine::MemoryPort does not support recvAtomic()");
+          return 0;
+        }
+      
+        void recvFunctional(PacketPtr pkt) override {
+            panic("CohortEngine::MemoryPort does not support recvFunctional()");
+        }
+      
     };
 
     MemoryPort res_port;
@@ -213,6 +217,8 @@ class CohortEngine : public ClockedObject
     EventFunctionWrapper pollEvent;
     Tick pollingInterval = 10000;
 
+    System *system;
+
 
   public:
 
@@ -222,11 +228,6 @@ class CohortEngine : public ClockedObject
     void init() override;
 
   protected:
-    Tick recvAtomic(PacketPtr pkt);
-    Tick recvAtomicBackdoor(PacketPtr pkt, MemBackdoorPtr &_backdoor);
-    void recvFunctional(PacketPtr pkt);
-    void recvMemBackdoorReq(const MemBackdoorReq &req,
-            MemBackdoorPtr &backdoor);
     bool recvTimingReq(PacketPtr pkt);
     bool recvTimingResp(PacketPtr pkt);
     void recvRespRetry();

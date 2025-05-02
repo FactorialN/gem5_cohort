@@ -7,6 +7,7 @@ class CohortEngine(ClockedObject):
     cxx_header = "mem/cohort_engine.hh"
     cxx_class = "gem5::memory::CohortEngine"
 
+    system = Param.System("System object this device is part of")
     port = ResponsePort("This port sends responses and receives requests")
     mem_port = RequestPort("Used to send memory requests")
     latency = Param.Latency("30ns", "Request to response latency")
