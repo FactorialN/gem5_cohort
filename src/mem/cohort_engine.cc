@@ -54,7 +54,7 @@ namespace memory
 {
 
 CohortEngine::CohortEngine(const CohortEngineParams &p) :
-    AbstractMemory(p),
+    ClockedObject(p),
     res_port(name() + ".port", *this), latency(p.latency),
     latency_var(p.latency_var), bandwidth(p.bandwidth), isBusy(false),
     retryReq(false), retryResp(false),
@@ -69,7 +69,7 @@ CohortEngine::CohortEngine(const CohortEngineParams &p) :
 void
 CohortEngine::init()
 {
-    AbstractMemory::init();
+    ClockedObject::init();
 
     // allow unconnected memories as this is used in several ruby
     // systems at the moment
@@ -89,7 +89,7 @@ CohortEngine::init()
         // Handle retry if necessary
     }
 
-    requestorId = system()->getRequestorId(this, "cohort_engine");
+    requestorId = p.system->getRequestorId(this, "cohort_engine");
 }
 
 Tick
@@ -332,15 +332,6 @@ CohortEngine::recvRespRetry()
     dequeue();
 }
 
-Port &
-CohortEngine::getPort(const std::string &if_name, PortID idx)
-{
-    if (if_name != "port") {
-        return AbstractMemory::getPort(if_name, idx);
-    } else {
-        return res_port;
-    }
-}
 
 DrainState
 CohortEngine::drain()

@@ -1,8 +1,8 @@
-from m5.objects.AbstractMemory import *
+from m5.objects.ClockedObject import *
 from m5.params import *
 
 
-class CohortEngine(AbstractMemory):
+class CohortEngine(ClockedObject):
     type = "CohortEngine"
     cxx_header = "mem/cohort_engine.hh"
     cxx_class = "gem5::memory::CohortEngine"

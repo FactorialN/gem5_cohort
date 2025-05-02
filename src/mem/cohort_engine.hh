@@ -65,7 +65,7 @@ namespace memory
  *
  * @sa  \ref gem5MemorySystem "gem5 Memory System"
  */
-class CohortEngine : public AbstractMemory
+class CohortEngine : public ClockedObject
 {
 
   private:
@@ -219,9 +219,6 @@ class CohortEngine : public AbstractMemory
     CohortEngine(const CohortEngineParams &p);
 
     DrainState drain() override;
-
-    Port &getPort(const std::string &if_name,
-                  PortID idx=InvalidPortID) override;
     void init() override;
 
   protected:
