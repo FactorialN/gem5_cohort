@@ -38,10 +38,10 @@ system.mem_ctrl.dram.range = system.mem_ranges[0]
 system.mem_ctrl.port = system.membus.mem_side_ports
 
 # 🛠️ Insert your Cohort Engine
-cohort = CohortEngine()
+cohort = CohortEngine(system=system)
 cohort.queueBaseAddr = 0x90000000
 cohort.mem_port = system.membus.cpu_side_ports
-system.cohort = cohort
+# system.cohort = cohort
 
 # Interrupt controller for SE mode (not full system)
 system.cpu.createInterruptController()
