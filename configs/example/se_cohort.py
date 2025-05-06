@@ -1,43 +1,41 @@
 from m5.objects import *
-# from gem5.runtime import get_runtime_isa
-from gem5.utils.override import override_mem_mode
-from gem5.simulate.simulator import run
+import m5
 
-# Define system
 system = System()
-system.clk_domain = SrcClockDomain(clock="1GHz", voltage_domain=VoltageDomain())
-system.mem_mode = 'timing'  # Required for memory system simulation
 
-# Set up memory
-system.mem_ranges = [AddrRange("512MB")]
+system.clk_domain = SrcClockDomain(clock='1GHz', voltage_domain=VoltageDomain())
+system.mem_mode = 'timing'
+system.mem_ranges = [AddrRange('512MB')]
 
-# Set up CPU
 system.cpu = TimingSimpleCPU()
-
-# Custom memory system: CohortEngine
-# Replace this with your actual C++ object name if different
 system.membus = SystemXBar()
-system.cohort_engine = CohortEngine()
+
 system.cpu.icache_port = system.membus.cpu_side_ports
 system.cpu.dcache_port = system.membus.cpu_side_ports
 
-# Connect cohort engine to membus (assuming CohortEngine has a mem_side and cpu_side)
-system.cohort_engine.cpu_side = system.membus.mem_side_ports
-system.cohort_engine.mem_side = system.membus.cpu_side_ports
+system.mem_ctrl = MemCtrl()
+system.mem_ctrl.dram = DDR3_1600_8x8()
+system.mem_ctrl.dram.range = system.mem_ranges[0]
+system.mem_ctrl.port = system.membus.mem_side_ports
 
-# Memory controller
-system.mem_ctrl = DDR3_1600_8x8()
-system.mem_ctrl.range = system.mem_ranges[0]
-system.mem_ctrl.port = system.cohort_engine.mem_side
+# CohortEngine setup
+system.cohort = CohortEngine(system=system, clk_domain=system.clk_domain)
+system.cohort.queueBaseAddr = 0x90000000
+system.cohort.cpu_side = system.membus.mem_side_ports
+system.cohort.mem_side = system.membus.cpu_side_ports
 
-# Set up process
-binary = "test_cohort.elf"  # Your test binary
+# SE mode workload
 process = Process()
-process.cmd = [binary]
+process.cmd = ['test_cohort.elf']
 system.cpu.workload = process
 system.cpu.createThreads()
 
-# Root object
+system.cpu.createInterruptController()
+system.system_port = system.membus.cpu_side_ports
+
 root = Root(full_system=False, system=system)
-override_mem_mode(system)
-run()
+m5.instantiate()
+
+print("Beginning simulation with Cohort Engine")
+exit_event = m5.simulate()
+print('Exiting @ tick %i because %s' % (m5.curTick(), exit_event.getCause()))
