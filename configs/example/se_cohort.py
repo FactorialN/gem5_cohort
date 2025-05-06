@@ -1,61 +1,43 @@
-from m5.objects import System
-from m5.objects import CohortEngine
-from m5.objects import TimingSimpleCPU
-from m5.objects import Root
-from m5.objects import AddrRange
-from m5.objects import SrcClockDomain, VoltageDomain
-from m5.objects import MemCtrl, DDR3_1600_8x8
-from m5.objects import SystemXBar
+from m5.objects import *
+# from gem5.runtime import get_runtime_isa
+from gem5.utils.override import override_mem_mode
+from gem5.simulate.simulator import run
 
-import m5
-from m5.util import convert
-
+# Define system
 system = System()
+system.clk_domain = SrcClockDomain(clock="1GHz", voltage_domain=VoltageDomain())
+system.mem_mode = 'timing'  # Required for memory system simulation
 
-# Setup basic clock and voltage domains
-system.clk_domain = SrcClockDomain()
-system.clk_domain.clock = '1GHz'
-system.clk_domain.voltage_domain = VoltageDomain()
+# Set up memory
+system.mem_ranges = [AddrRange("512MB")]
 
-# Setup memory
-system.mem_mode = 'timing'
-system.mem_ranges = [AddrRange('512MB')]
-
-# CPU
+# Set up CPU
 system.cpu = TimingSimpleCPU()
 
-# Memory Bus
+# Custom memory system: CohortEngine
+# Replace this with your actual C++ object name if different
 system.membus = SystemXBar()
-
-# Connect CPU to membus
+system.cohort_engine = CohortEngine()
 system.cpu.icache_port = system.membus.cpu_side_ports
 system.cpu.dcache_port = system.membus.cpu_side_ports
 
-# Add Memory Controller
-system.mem_ctrl = MemCtrl()
-system.mem_ctrl.dram = DDR3_1600_8x8()
-system.mem_ctrl.dram.range = system.mem_ranges[0]
-system.mem_ctrl.port = system.membus.mem_side_ports
+# Connect cohort engine to membus (assuming CohortEngine has a mem_side and cpu_side)
+system.cohort_engine.cpu_side = system.membus.mem_side_ports
+system.cohort_engine.mem_side = system.membus.cpu_side_ports
 
-# 🛠️ Insert your Cohort Engine
-cohort = CohortEngine(system=system)
-cohort.queueBaseAddr = 0x90000000
-cohort.mem_port = system.membus.cpu_side_ports
-# system.cohort = cohort
+# Memory controller
+system.mem_ctrl = DDR3_1600_8x8()
+system.mem_ctrl.range = system.mem_ranges[0]
+system.mem_ctrl.port = system.cohort_engine.mem_side
 
-# Interrupt controller for SE mode (not full system)
-system.cpu.createInterruptController()
+# Set up process
+binary = "test_cohort.elf"  # Your test binary
+process = Process()
+process.cmd = [binary]
+system.cpu.workload = process
+system.cpu.createThreads()
 
-# System port
-system.system_port = system.membus.cpu_side_ports
-
-# Root
+# Root object
 root = Root(full_system=False, system=system)
-
-# Instantiate
-m5.instantiate()
-
-# Run
-print("Beginning simulation with Cohort Engine")
-exit_event = m5.simulate()
-print('Exiting @ tick %i because %s' % (m5.curTick(), exit_event.getCause()))
+override_mem_mode(system)
+run()

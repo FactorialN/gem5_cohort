@@ -62,11 +62,27 @@ int cohort_unregister(int acc_id, fifo_t *acc_in, fifo_t *acc_out) {
 
 
 int main() {
-    volatile uint64_t *queue = (volatile uint64_t *)QUEUE_ADDR;
 
-    // Write a task to shared memory
-    queue[0] = 42;
-
-    // Loop forever to keep simulation alive
-    while (1);
+     *QUEUE_ADDR = 0x123456789ABCDEF0;
+     // Initialize input and output queues
+     fifo_t *in_queue = fifo_init(sizeof(uint64_t), 8);
+     fifo_t *out_queue = fifo_init(sizeof(uint64_t), 8);  // Optional if your engine returns results
+ 
+     // Register with cohort engine
+     cohort_register(1, in_queue, out_queue);
+ 
+     // Push some tasks
+     for (uint64_t i = 0; i < 5; ++i) {
+         push(i * 10, in_queue);
+     }
+ 
+     // Keep simulation running
+     while (1);
+ 
+     // (Unregister is unreachable but shows cleanup API)
+     cohort_unregister(1, in_queue, out_queue);
+     fifo_deinit(in_queue);
+     fifo_deinit(out_queue);
+ 
+     return 0;
 }

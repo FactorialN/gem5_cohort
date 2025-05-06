@@ -52,6 +52,8 @@
 #include "mem/abstract_mem.hh"
 #include "mem/port.hh"
 #include "params/CohortEngine.hh"
+#include "mem/port_proxy.hh"
+#include "sim/system.hh"
 
 namespace gem5
 {
@@ -219,6 +221,8 @@ class CohortEngine : public ClockedObject
 
     System *system;
 
+    EventFunctionWrapper tickEvent;
+
 
   public:
 
@@ -236,6 +240,7 @@ class CohortEngine : public ClockedObject
     void pollQueue();
     AddrRange getAddrRange() const;
     void processEntry(uint64_t val);
+    Tick tick();
 
 };
 

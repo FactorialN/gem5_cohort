@@ -62,15 +62,30 @@ CohortEngine::CohortEngine(const CohortEngineParams &p) :
     dequeueEvent([this]{ dequeue(); }, name()),
     req_port(name() + ".mem_port", *this),
     pollEvent([this]{ pollQueue(); }, name()),
+    tickEvent([this]{ tick();}, name()),
     system(p.system)
 {
     
 }
 
+Tick CohortEngine::tick()
+{
+    uint64_t data = 0;
+    PortProxy memProxy(req_port, system->cacheLineSize());
+    memProxy.readBlob(queueBaseAddr, &data, sizeof(data));
+    DPRINTF(Drain, "Read value: 0x%016lx\n", data);
+
+    // Only tick once for now
+    return MaxTick;
+}
+
+
 void
 CohortEngine::init()
 {
     ClockedObject::init();
+
+    std::cout << "CohortEngine::init() called at tick " << curTick() << std::endl;
 
     // allow unconnected memories as this is used in several ruby
     // systems at the moment
@@ -80,6 +95,8 @@ CohortEngine::init()
 
     // Create a memory request to QUEUE_ADDR
     queueBaseAddr = 0x90000000;
+
+    schedule(tickEvent, curTick()+1000);
 
     auto pkt = buildReadRequest(queueBaseAddr, queueEntrySize);
 
