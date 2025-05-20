@@ -63,7 +63,15 @@ int cohort_unregister(int acc_id, fifo_t *acc_in, fifo_t *acc_out) {
 
 int main() {
 
-     *QUEUE_ADDR = 0x123456789ABCDEF0;
+     
+
+    volatile uint64_t *queue = (uint64_t *)QUEUE_ADDR;
+
+    printf("Writing to Cohort queue...\n");
+    queue[0] = 0x12345678abcdef00;
+
+    printf("Reading from Cohort queue: 0x%lx\n", queue[0]);
+     /*
      // Initialize input and output queues
      fifo_t *in_queue = fifo_init(sizeof(uint64_t), 8);
      fifo_t *out_queue = fifo_init(sizeof(uint64_t), 8);  // Optional if your engine returns results
@@ -83,6 +91,6 @@ int main() {
      cohort_unregister(1, in_queue, out_queue);
      fifo_deinit(in_queue);
      fifo_deinit(out_queue);
- 
+    */
      return 0;
 }

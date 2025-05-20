@@ -19,10 +19,10 @@ system.mem_ctrl.dram.range = system.mem_ranges[0]
 system.mem_ctrl.port = system.membus.mem_side_ports
 
 # CohortEngine setup
-system.cohort = CohortEngine(system=system, clk_domain=system.clk_domain)
+system.cohort = CohortEngine(clk_domain=system.clk_domain)
 system.cohort.queueBaseAddr = 0x90000000
-system.cohort.cpu_side = system.membus.mem_side_ports
-system.cohort.mem_side = system.membus.cpu_side_ports
+system.cohort.port = system.membus.mem_side_ports
+system.cohort.mem_port = system.membus.cpu_side_ports
 
 # SE mode workload
 process = Process()
