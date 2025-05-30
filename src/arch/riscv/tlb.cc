@@ -431,7 +431,7 @@ TLB::translate(const RequestPtr &req, ThreadContext *tc,
 
         req->setPaddr(paddr);
 
-        if(vaddr == 0x10000000)std::cout << "[SE-TLB] VA 0x" << std::hex << vaddr
+        if(vaddr == 0x10000000 || vaddr == 0x11000000)std::cout << "[SE-TLB] VA 0x" << std::hex << vaddr
           << " → PA 0x" << paddr << std::dec << std::endl;
 
         return NoFault;

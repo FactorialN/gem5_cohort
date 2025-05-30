@@ -113,7 +113,7 @@ Tick CohortEngine::tick()
         // queue is not empty
 
         // Compute pop address
-        Addr dataAddr = (inhead-0x10000010)+queueBaseAddr+16;
+        Addr dataAddr = (inhead-vqueueBaseAddr)+queueBaseAddr;
 
         uint64_t value;
         readFromMemory(dataAddr, &value, sizeof(value));
@@ -142,24 +142,32 @@ CohortEngine::init()
 
     // Create a memory request to QUEUE_ADDR
     queueBaseAddr = 0x85000;
+    vqueueBaseAddr = 0x10000000;
+    outqueueBaseAddr = 0x86000;
+    voutqueueBaseAddr = 0x11000000;
 
+    pendingRequests.clear();
 }
 
 bool
 CohortEngine::readAddr(Addr addr) {
-    if (retryPkt != nullptr) return false;
-    auto pkt = buildReadRequest(addr, queueEntrySize);
+    PacketPtr pkt = buildReadRequest(addr, queueEntrySize);
+
+    if (!pendingRequests.empty()) {
+        // Can't send now, queue it
+        pendingRequests.push_back(pkt);
+        return false;
+    }
 
     if (!req_port.sendTimingReq(pkt)) {
-        retryPkt = pkt;
-        //warn("Could not send queue read request in startup().");
+        pendingRequests.push_back(pkt);  // Track this failed request
+        return false;
     }
     return true;
 }
 
 bool
 CohortEngine::writeAddr(Addr addr, uint64_t data) {
-    if (retryPkt != nullptr) return false;
     RequestPtr req = std::make_shared<Request>(
         addr,                        // Physical address to write to
         sizeof(data),                     // Size of the write
@@ -171,11 +179,15 @@ CohortEngine::writeAddr(Addr addr, uint64_t data) {
     pkt->dataStatic(&data); // You can use dataDynamic if you want to allocate internally
 
     // 3. Send the request
+    if (!pendingRequests.empty()) {
+        // Can't send now, queue it
+        pendingRequests.push_back(pkt);
+        return false;
+    }
+
     if (!req_port.sendTimingReq(pkt)) {
-        // Retry later
-        retryPkt = pkt;
-        //DPRINTF(Cohort, "Write to 0x%x failed, will retry\n", targetAddr);
-        // You might want to set up a retry mechanism
+        pendingRequests.push_back(pkt);  // Track this failed request
+        return false;
     }
     return true;
 }
@@ -269,6 +281,19 @@ CohortEngine::getAddrRange() const
 void
 CohortEngine::processEntry(uint64_t val){
     std::cout << "Processing Acclerator with value " << val << std::endl;
+    uint64_t outhead, outtail;
+    //readFromMemory(outqueueBaseAddr, &outhead, sizeof(outhead));
+    readFromMemory(outqueueBaseAddr+8, &outtail, sizeof(outtail));
+
+    Addr dataAddr = outtail-voutqueueBaseAddr+outqueueBaseAddr ;
+
+    // Advance tail
+    val+=1;
+    outtail+=8;
+    std::cout << "[Cohort] Pushed value: 0x" << std::hex << val << " " << dataAddr  << " " << outtail << std::endl;
+    writeAddr(dataAddr, val);
+    writeAddr(outqueueBaseAddr + 8, outtail);
+
 }
 
 bool
@@ -376,16 +401,14 @@ CohortEngine::buildReadRequest(Addr addr, unsigned size)
 void
 CohortEngine::recvReqRetry()
 {
-    // If you're using a retry queue or retrying reads, do it here.
-    // For now, just print/log that the port is ready to retry.
-    //DPRINTF(Debug, "CohortEngine: req_port can now retry.\n");
+    while (!pendingRequests.empty()) {
+        PacketPtr pkt = pendingRequests.front();
 
-    // Example: retry the last request if you stored it
-    if (retryPkt) {
-        if (req_port.sendTimingReq(retryPkt)) {
-            retryPkt = nullptr;
+        if (req_port.sendTimingReq(pkt)) {
+            pendingRequests.pop_front();  // Sent successfully
         } else {
-            //DPRINTF(Debug, "Retry still failed.\n");
+            // Stop trying once a send fails
+            break;
         }
     }
 }

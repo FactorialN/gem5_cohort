@@ -159,10 +159,15 @@ class CohortEngine : public ClockedObject
     /** Request id for all generated traffic */
     RequestorID requestorId;
 
+    std::deque<PacketPtr> pendingRequests;
+
     PacketPtr retryPkt = nullptr;
 
     // queue parameters
     Addr queueBaseAddr = 0;
+    Addr vqueueBaseAddr = 0;
+    Addr outqueueBaseAddr = 0;
+    Addr voutqueueBaseAddr = 0;
     unsigned queueEntrySize = sizeof(uint64_t);
     unsigned queueLength = 64;
     unsigned headIndex = 0;

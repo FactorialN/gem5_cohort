@@ -115,8 +115,8 @@ int main() {
     printf("Reading from Cohort queue: 0x%lx\n", queue[0]);
      
      // Initialize input and output queues
-    fifo_t *in_queue = fifo_init(sizeof(uint64_t), 16, COMPUTE_QUEUE_ADDR);
-     //fifo_t *out_queue = fifo_init(sizeof(uint64_t), 16, RESULT_QUEUE_ADDR);  // Optional if your engine returns results
+    fifo_t *in_queue = fifo_init(sizeof(uint64_t), 32, COMPUTE_QUEUE_ADDR);
+    fifo_t *out_queue = fifo_init(sizeof(uint64_t), 32, RESULT_QUEUE_ADDR);  // Optional if your engine returns results
     print_fifo(in_queue);
 
     push(45, in_queue);
@@ -125,7 +125,7 @@ int main() {
     push(10492, in_queue);
 
     print_fifo(in_queue);
-
+    print_fifo(out_queue);
     
      /*
      // Register with cohort engine
