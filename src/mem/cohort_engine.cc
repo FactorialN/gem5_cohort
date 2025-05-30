@@ -55,11 +55,10 @@ namespace memory
 
 CohortEngine::CohortEngine(const CohortEngineParams &p) :
     ClockedObject(p),
-    res_port(name() + ".res_port", *this), latency(p.latency),
+    latency(p.latency),
     latency_var(p.latency_var), bandwidth(p.bandwidth), isBusy(false),
-    retryReq(false), retryResp(false),
+    retryReq(false),
     releaseEvent([this]{ release(); }, name()),
-    dequeueEvent([this]{ dequeue(); }, name()),
     req_port(name() + ".req_port", *this),
     pollEvent([this]{ pollQueue(); }, name()),
     tickEvent([this]{ tick();}, name()),
@@ -74,9 +73,7 @@ CohortEngine::getPort(const std::string &if_name, PortID idx)
 {
     if (if_name == "req_port") {
         return req_port;
-    } else if (if_name == "res_port") {
-        return res_port;
-    } else {
+    }else {
         return ClockedObject::getPort(if_name, idx);
     }
 }
@@ -104,12 +101,6 @@ CohortEngine::init()
     ClockedObject::init();
 
     std::cout << "CohortEngine::init() called at tick " << curTick() << std::endl;
-
-    // allow unconnected memories as this is used in several ruby
-    // systems at the moment
-    if (res_port.isConnected()) {
-        res_port.sendRangeChange();
-    }
 
     // Create a memory request to QUEUE_ADDR
     queueBaseAddr = 0x10000000;
@@ -185,35 +176,6 @@ CohortEngine::recvTimingReq(PacketPtr pkt)
     // go ahead and deal with the packet and put the response in the
     // queue if there is one
     bool needsResponse = pkt->needsResponse();
-    //recvAtomic(pkt);
-    // turn packet around to go back to requestor if response expected
-    if (needsResponse) {
-        // recvAtomic() should already have turned packet into
-        // atomic response
-        assert(pkt->isResponse());
-
-        Tick when_to_send = curTick() + receive_delay + getLatency();
-
-        // typically this should be added at the end, so start the
-        // insertion sort with the last element, also make sure not to
-        // re-order in front of some existing packet with the same
-        // address, the latter is important as this memory effectively
-        // hands out exclusive copies (shared is not asserted)
-        auto i = packetQueue.end();
-        --i;
-        while (i != packetQueue.begin() && when_to_send < i->tick &&
-               !i->pkt->matchAddr(pkt))
-            --i;
-
-        // emplace inserts the element before the position pointed to by
-        // the iterator, so advance it one step
-        packetQueue.emplace(++i, pkt, when_to_send);
-
-        if (!retryResp && !dequeueEvent.scheduled())
-            schedule(dequeueEvent, packetQueue.back().tick);
-    } else {
-        pendingDelete.reset(pkt);
-    }
 
     return true;
 }
@@ -289,34 +251,10 @@ CohortEngine::release()
     isBusy = false;
     if (retryReq) {
         retryReq = false;
-        res_port.sendRetryReq();
+        //res_port.sendRetryReq();
     }
 }
 
-void
-CohortEngine::dequeue()
-{
-    assert(!packetQueue.empty());
-    DeferredPacket deferred_pkt = packetQueue.front();
-
-    retryResp = !res_port.sendTimingResp(deferred_pkt.pkt);
-
-    if (!retryResp) {
-        packetQueue.pop_front();
-
-        // if the queue is not empty, schedule the next dequeue event,
-        // otherwise signal that we are drained if we were asked to do so
-        if (!packetQueue.empty()) {
-            // if there were packets that got in-between then we
-            // already have an event scheduled, so use re-schedule
-            reschedule(dequeueEvent,
-                       std::max(packetQueue.front().tick, curTick()), true);
-        } else if (drainState() == DrainState::Draining) {
-            DPRINTF(Drain, "Draining of CohortEngine complete\n");
-            signalDrainDone();
-        }
-    }
-}
 
 Tick
 CohortEngine::getLatency() const
@@ -328,27 +266,16 @@ CohortEngine::getLatency() const
 void
 CohortEngine::recvRespRetry()
 {
-    assert(retryResp);
 
-    dequeue();
 }
 
 
 DrainState
 CohortEngine::drain()
 {
-    if (!packetQueue.empty()) {
-        DPRINTF(Drain, "CohortEngine Queue has requests, waiting to drain\n");
-        return DrainState::Draining;
-    } else {
-        return DrainState::Drained;
-    }
+    return DrainState::Drained;
 }
 
-CohortEngine::MemoryPort::MemoryPort(const std::string& _name,
-                                     CohortEngine& _memory)
-    : ResponsePort(_name), mem(_memory)
-{ }
 
 CohortEngine::RequestQueuePort::RequestQueuePort(
     const std::string &name, CohortEngine &owner)
@@ -367,27 +294,7 @@ CohortEngine::RequestQueuePort::recvReqRetry()
     owner.recvReqRetry();
 }
 
-AddrRangeList
-CohortEngine::MemoryPort::getAddrRanges() const
-{
-    AddrRangeList ranges;
-    ranges.push_back(mem.getAddrRange());
-    return ranges;
-}
 
-
-
-bool
-CohortEngine::MemoryPort::recvTimingReq(PacketPtr pkt)
-{
-    return mem.recvTimingReq(pkt);
-}
-
-void
-CohortEngine::MemoryPort::recvRespRetry()
-{
-    mem.recvRespRetry();
-}
 
 PacketPtr
 CohortEngine::buildReadRequest(Addr addr, unsigned size)

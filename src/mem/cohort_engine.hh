@@ -88,32 +88,6 @@ class CohortEngine : public ClockedObject
         { }
     };
 
-    class MemoryPort : public ResponsePort
-    {
-      private:
-        CohortEngine& mem;
-
-      public:
-        MemoryPort(const std::string& _name, CohortEngine& _memory);
-
-      protected:
-        bool recvTimingReq(PacketPtr pkt) override;
-        void recvRespRetry() override;
-        AddrRangeList getAddrRanges() const override;
-
-        Tick recvAtomic(PacketPtr pkt) override {
-          panic("CohortEngine::MemoryPort does not support recvAtomic()");
-          return 0;
-        }
-      
-        void recvFunctional(PacketPtr pkt) override {
-            panic("CohortEngine::MemoryPort does not support recvFunctional()");
-        }
-      
-    };
-
-    MemoryPort res_port;
-
     /**
      * Latency from that a request is accepted until the response is
      * ready to be sent.
@@ -125,12 +99,6 @@ class CohortEngine : public ClockedObject
      */
     const Tick latency_var;
 
-    /**
-     * Internal (unbounded) storage to mimic the delay caused by the
-     * actual memory access. Note that this is where the packet spends
-     * the memory latency.
-     */
-    std::list<DeferredPacket> packetQueue;
 
     /**
      * Bandwidth in ticks per byte. The regulation affects the
@@ -151,11 +119,6 @@ class CohortEngine : public ClockedObject
      */
     bool retryReq;
 
-    /**
-     * Remember if we failed to send a response and are awaiting a
-     * retry. This is only used as a check.
-     */
-    bool retryResp;
 
     mutable Random::RandomPtr rng = Random::genRandom();
 
@@ -167,13 +130,6 @@ class CohortEngine : public ClockedObject
 
     EventFunctionWrapper releaseEvent;
 
-    /**
-     * Dequeue a packet from our internal packet queue and move it to
-     * the port where it will be sent as soon as possible.
-     */
-    void dequeue();
-
-    EventFunctionWrapper dequeueEvent;
 
     /**
      * Detemine the latency.
@@ -181,12 +137,6 @@ class CohortEngine : public ClockedObject
      * @return the latency seen by the current packet
      */
     Tick getLatency() const;
-
-    /**
-     * Upstream caches need this packet until true is returned, so
-     * hold it for deletion until a subsequent call
-     */
-    std::unique_ptr<Packet> pendingDelete;
 
     /**
      * The port used to read from the shared memory queue
