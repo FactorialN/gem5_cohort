@@ -196,7 +196,8 @@ class CohortEngine : public ClockedObject
     AddrRange getAddrRange() const;
     void processEntry(uint64_t val);
     Tick tick();
-
+    bool readAddr(Addr addr);
+    bool writeAddr(Addr addr, uint64_t data);
 };
 
 } // namespace memory

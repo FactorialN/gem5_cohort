@@ -20,7 +20,6 @@ system.mem_ctrl.port = system.membus.mem_side_ports
 
 # CohortEngine setup
 system.cohort = CohortEngine(clk_domain=system.clk_domain)
-system.cohort.range = AddrRange(0x10000000, 0x1F000000) 
 system.cohort.queueBaseAddr = 0x10000000
 #system.cohort.res_port = system.membus.mem_side_ports
 print("Available ports on cohort:", system.cohort._ports)

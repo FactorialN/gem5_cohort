@@ -7,7 +7,6 @@ class CohortEngine(ClockedObject):
     cxx_header = "mem/cohort_engine.hh"
     cxx_class = "gem5::memory::CohortEngine"
 
-    range = Param.AddrRange("Address range for the CohortEngine")
     #system = Param.System("System object this device is part of")
     #res_port = ResponsePort("This port sends responses and receives requests")
     req_port = RequestPort("Used to send memory requests")

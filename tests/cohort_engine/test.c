@@ -6,7 +6,8 @@
 #include <unistd.h>
 
 #define QUEUE_ADDR 0x10000000
-#define SIZE 0x0F000000 
+#define MEM_ADDR 0x00000000
+#define SIZE 0x1FFFFFFF 
 /*
 typedef struct {
     uint64_t head;
@@ -67,7 +68,7 @@ int cohort_unregister(int acc_id, fifo_t *acc_in, fifo_t *acc_out) {
 
 int main() {
 
-    void *mapped = mmap(QUEUE_ADDR, SIZE,
+    void *mapped = mmap(MEM_ADDR, SIZE,
                         PROT_READ | PROT_WRITE,
                         MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED,
                         -1, 0);
@@ -82,7 +83,7 @@ int main() {
     volatile uint64_t *queue = (uint64_t *)QUEUE_ADDR;
 
     printf("Writing to Cohort queue...\n");
-    queue[0] = 0x12345678abcdef00;
+    queue[0] = 42;
 
     printf("Reading from Cohort queue: 0x%lx\n", queue[0]);
      /*

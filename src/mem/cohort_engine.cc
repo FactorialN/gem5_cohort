@@ -89,6 +89,10 @@ Tick CohortEngine::tick()
 
     // req_port -> fixed address in memory -> check address
     // read state
+    readAddr(queueBaseAddr);
+
+
+    schedule(tickEvent, curTick() + 10000);
 
     // Only tick once for now
     return MaxTick;
@@ -103,8 +107,43 @@ CohortEngine::init()
     std::cout << "CohortEngine::init() called at tick " << curTick() << std::endl;
 
     // Create a memory request to QUEUE_ADDR
-    queueBaseAddr = 0x10000000;
+    queueBaseAddr = 0x85000;
 
+}
+
+bool
+CohortEngine::readAddr(Addr addr) {
+    if (retryPkt != nullptr) return false;
+    auto pkt = buildReadRequest(addr, queueEntrySize);
+
+    if (!req_port.sendTimingReq(pkt)) {
+        retryPkt = pkt;
+        //warn("Could not send queue read request in startup().");
+    }
+    return true;
+}
+
+bool
+CohortEngine::writeAddr(Addr addr, uint64_t data) {
+    if (retryPkt != nullptr) return false;
+    RequestPtr req = std::make_shared<Request>(
+        addr,                        // Physical address to write to
+        sizeof(data),                     // Size of the write
+        Request::UNCACHEABLE, requestorId
+    );
+
+    // 2. Allocate a write packet
+    PacketPtr pkt = new Packet(req, MemCmd::WriteReq);
+    pkt->dataStatic(&data); // You can use dataDynamic if you want to allocate internally
+
+    // 3. Send the request
+    if (!req_port.sendTimingReq(pkt)) {
+        // Retry later
+        retryPkt = pkt;
+        //DPRINTF(Cohort, "Write to 0x%x failed, will retry\n", targetAddr);
+        // You might want to set up a retry mechanism
+    }
+    return true;
 }
 
 void
@@ -113,16 +152,12 @@ CohortEngine::startup()
     // Now it's safe to schedule memory access
     ClockedObject::startup();
     //requestorId = SimObject::getRequestorId(this);
+    std::cout << "Starting Cohort Engine "<< std::endl;
     std::cout << "Current RequestorID for is "<< requestorId << std::endl;
 
     schedule(tickEvent, curTick() + 1000);
-
-    auto pkt = buildReadRequest(queueBaseAddr, queueEntrySize);
-
-    if (!req_port.sendTimingReq(pkt)) {
-        retryPkt = pkt;
-        warn("Could not send queue read request in startup().");
-    }
+    readAddr(queueBaseAddr);
+    std::cout << "Started Cohort Engine "<< std::endl;
 }
 
 
@@ -194,13 +229,14 @@ AddrRange
 CohortEngine::getAddrRange() const
 {
     // Return a fake, unused, non-overlapping range (e.g., very high)
-    return AddrRange(0x1000000, 0x1FFFFFFF);
+    return AddrRange(queueBaseAddr, queueBaseAddr+0x10000000);
 }
 
 void
 CohortEngine::processEntry(uint64_t val){
+    //std::cout << "Processing Entry with value " << val << std::endl;
     if (val == 42){
-        DPRINTF(Drain, "Task: Add fourty-two numbers\n");
+        writeAddr(queueBaseAddr, 43);
     }
 }
 
@@ -208,8 +244,10 @@ bool
 CohortEngine::recvTimingResp(PacketPtr pkt)
 {
     uint64_t val = pkt->getLE<uint64_t>();
-    //DPRINTF(Cohort, "CohortEngine received value from queue: %lu\n", val);
+    if(pkt->getAddr() != queueBaseAddr) std::cout << "[Cohort] Got data from physical address: 0x" << std::hex << pkt->getAddr() << std::endl;
 
+    //DPRINTF(Cohort, "CohortEngine received value from queue: %lu\n", val);
+    //std::cout << "Received Reading Result "<< val << std::endl;
     // You could simulate processing here
     if (val == 0) {
         //DPRINTF(Cohort, "Queue is empty.\n");
