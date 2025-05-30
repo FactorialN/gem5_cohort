@@ -8,7 +8,7 @@
 #define QUEUE_ADDR 0x10000000
 #define MEM_ADDR 0x00000000
 #define SIZE 0x1FFFFFFF 
-/*
+
 typedef struct {
     uint64_t head;
     uint64_t tail;
@@ -19,7 +19,7 @@ typedef struct {
 
 fifo_t *fifo_init(int element_size, int queue_length) {
     size_t total_size = sizeof(fifo_t) + element_size * queue_length;
-    fifo_t *q = (fifo_t *) 0x90001000;  // static address in DRAM
+    fifo_t *q = (fifo_t *) QUEUE_ADDR;  // static address in DRAM
 
     // Clear everything
     for (int i = 0; i < total_size / sizeof(uint64_t); i++)
@@ -29,7 +29,7 @@ fifo_t *fifo_init(int element_size, int queue_length) {
     q->element_size = element_size;
     return q;
 }
-
+/*
 void push(uint64_t element, fifo_t *q) {
     uint64_t tail = q->tail;
     uint64_t idx = tail % q->capacity;
@@ -86,11 +86,12 @@ int main() {
     queue[0] = 42;
 
     printf("Reading from Cohort queue: 0x%lx\n", queue[0]);
-     /*
+     
      // Initialize input and output queues
      fifo_t *in_queue = fifo_init(sizeof(uint64_t), 8);
      fifo_t *out_queue = fifo_init(sizeof(uint64_t), 8);  // Optional if your engine returns results
- 
+    
+     /*
      // Register with cohort engine
      cohort_register(1, in_queue, out_queue);
  
