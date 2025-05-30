@@ -55,25 +55,43 @@ namespace memory
 
 CohortEngine::CohortEngine(const CohortEngineParams &p) :
     ClockedObject(p),
-    res_port(name() + ".port", *this), latency(p.latency),
+    res_port(name() + ".res_port", *this), latency(p.latency),
     latency_var(p.latency_var), bandwidth(p.bandwidth), isBusy(false),
     retryReq(false), retryResp(false),
     releaseEvent([this]{ release(); }, name()),
     dequeueEvent([this]{ dequeue(); }, name()),
-    req_port(name() + ".mem_port", *this),
+    req_port(name() + ".req_port", *this),
     pollEvent([this]{ pollQueue(); }, name()),
     tickEvent([this]{ tick();}, name()),
-    system(p.system)
+    requestorId(p.requestor_id)
+    //system(p.system)
 {
     
 }
 
+Port &
+CohortEngine::getPort(const std::string &if_name, PortID idx)
+{
+    if (if_name == "req_port") {
+        return req_port;
+    } else if (if_name == "res_port") {
+        return res_port;
+    } else {
+        return ClockedObject::getPort(if_name, idx);
+    }
+}
+
+
 Tick CohortEngine::tick()
 {
     uint64_t data = 0;
-    PortProxy memProxy(req_port, system->cacheLineSize());
-    memProxy.readBlob(queueBaseAddr, &data, sizeof(data));
+    //PortProxy memProxy(req_port, system->getCacheLineSize());
+    //memProxy.readBlob(queueBaseAddr, &data, sizeof(data));
     DPRINTF(Drain, "Read value: 0x%016lx\n", data);
+    // this 
+
+    // req_port -> fixed address in memory -> check address
+    // read state
 
     // Only tick once for now
     return MaxTick;
@@ -94,21 +112,28 @@ CohortEngine::init()
     }
 
     // Create a memory request to QUEUE_ADDR
-    queueBaseAddr = 0x90000000;
+    queueBaseAddr = 0x10000000;
 
-    schedule(tickEvent, curTick()+1000);
+}
+
+void
+CohortEngine::startup()
+{
+    // Now it's safe to schedule memory access
+    ClockedObject::startup();
+    //requestorId = SimObject::getRequestorId(this);
+    DPRINTF(Drain, "RequestorID for %s is %d\n", name(), requestorId);
+
+    schedule(tickEvent, curTick() + 1000);
 
     auto pkt = buildReadRequest(queueBaseAddr, queueEntrySize);
 
-    // Try to send it
     if (!req_port.sendTimingReq(pkt)) {
         retryPkt = pkt;
-        warn("Could not send queue read request.");
-        // Handle retry if necessary
+        warn("Could not send queue read request in startup().");
     }
-
-    requestorId = system->getRequestorId(this, "cohort_engine");
 }
+
 
 
 bool

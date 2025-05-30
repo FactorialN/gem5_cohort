@@ -7,18 +7,22 @@ class CohortEngine(ClockedObject):
     cxx_header = "mem/cohort_engine.hh"
     cxx_class = "gem5::memory::CohortEngine"
 
-    system = Param.System("System object this device is part of")
-    port = ResponsePort("This port sends responses and receives requests")
-    mem_port = RequestPort("Used to send memory requests")
+    #system = Param.System("System object this device is part of")
+    res_port = ResponsePort("This port sends responses and receives requests")
+    req_port = RequestPort("Used to send memory requests")
     latency = Param.Latency("30ns", "Request to response latency")
     latency_var = Param.Latency("0ns", "Request to response latency variance")
+    #cache_line_size = Param.Unsigned(64, "Cache line size")
+
     # The memory bandwidth limit default is set to 12.8GiB/s which is
     # representative of a x64 DDR3-1600 channel.
     bandwidth = Param.MemoryBandwidth(
         "12.8GiB/s", "Combined read and write bandwidth"
     )
 
-    queueBaseAddr = Param.Addr(0x90000000, "Base address of the memory-backed queue")
+    queueBaseAddr = Param.Addr(0x10000000, "Base address of the memory-backed queue")
+    requestor_id = Param.Int(42, "Requestor ID for the Cohort Engine")
+
 
     def controller(self):
         # cohort engine doesn't use a MemCtrl

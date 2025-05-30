@@ -219,7 +219,8 @@ class CohortEngine : public ClockedObject
     EventFunctionWrapper pollEvent;
     Tick pollingInterval = 10000;
 
-    System *system;
+    //System *system;
+    //Params<Unsigned> cache_line_size;
 
     EventFunctionWrapper tickEvent;
 
@@ -230,6 +231,10 @@ class CohortEngine : public ClockedObject
 
     DrainState drain() override;
     void init() override;
+    void startup() override;
+
+    Port &getPort(const std::string &if_name, PortID idx = InvalidPortID) override;
+
 
   protected:
     bool recvTimingReq(PacketPtr pkt);

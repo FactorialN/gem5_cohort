@@ -20,13 +20,20 @@ system.mem_ctrl.port = system.membus.mem_side_ports
 
 # CohortEngine setup
 system.cohort = CohortEngine(clk_domain=system.clk_domain)
-system.cohort.queueBaseAddr = 0x90000000
-system.cohort.port = system.membus.mem_side_ports
-system.cohort.mem_port = system.membus.cpu_side_ports
+system.cohort.queueBaseAddr = 0x10000000
+#system.cohort.res_port = system.membus.mem_side_ports
+print("Available ports on cohort:", system.cohort._ports)
+
+system.cohort.req_port = system.membus.cpu_side_ports
+
 
 # SE mode workload
-process = Process()
-process.cmd = ['test_cohort.elf']
+binary_path = '/596/gem5_cohort/test_cohort.elf'
+system.workload = SEWorkload.init_compatible(binary_path)
+
+process = Process(pid=100)
+process.cmd = [binary_path]
+process.executable = binary_path
 system.cpu.workload = process
 system.cpu.createThreads()
 
@@ -35,6 +42,8 @@ system.system_port = system.membus.cpu_side_ports
 
 root = Root(full_system=False, system=system)
 m5.instantiate()
+
+#system.cohort.requestor_id = system.getRequestorId(system.cohort, "cohort_engine")
 
 print("Beginning simulation with Cohort Engine")
 exit_event = m5.simulate()

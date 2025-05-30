@@ -4,6 +4,7 @@
 
 #define QUEUE_ADDR 0x90000000
 
+/*
 typedef struct {
     uint64_t head;
     uint64_t tail;
@@ -59,18 +60,18 @@ int cohort_unregister(int acc_id, fifo_t *acc_in, fifo_t *acc_out) {
     entry->acc_id = 0;
     return 0;
 }
-
+*/
 
 int main() {
 
      
 
-    volatile uint64_t *queue = (uint64_t *)QUEUE_ADDR;
+    //volatile uint64_t *queue = (uint64_t *)QUEUE_ADDR;
 
     printf("Writing to Cohort queue...\n");
-    queue[0] = 0x12345678abcdef00;
+    //queue[0] = 0x12345678abcdef00;
 
-    printf("Reading from Cohort queue: 0x%lx\n", queue[0]);
+    //printf("Reading from Cohort queue: 0x%lx\n", queue[0]);
      /*
      // Initialize input and output queues
      fifo_t *in_queue = fifo_init(sizeof(uint64_t), 8);
