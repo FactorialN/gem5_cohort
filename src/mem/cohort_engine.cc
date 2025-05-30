@@ -62,7 +62,7 @@ CohortEngine::CohortEngine(const CohortEngineParams &p) :
     req_port(name() + ".req_port", *this),
     pollEvent([this]{ pollQueue(); }, name()),
     tickEvent([this]{ tick();}, name()),
-    requestorId(p.requestor_id)
+    requestorId(0)
     //system(p.system)
 {
     
@@ -113,7 +113,7 @@ CohortEngine::startup()
     // Now it's safe to schedule memory access
     ClockedObject::startup();
     //requestorId = SimObject::getRequestorId(this);
-    DPRINTF(Drain, "RequestorID for %s is %d\n", name(), requestorId);
+    std::cout << "Current RequestorID for is "<< requestorId << std::endl;
 
     schedule(tickEvent, curTick() + 1000);
 
@@ -136,6 +136,16 @@ CohortEngine::recvTimingReq(PacketPtr pkt)
     panic_if(!(pkt->isRead() || pkt->isWrite()),
              "Should only see read and writes at memory controller, "
              "saw %s to %#llx\n", pkt->cmdString(), pkt->getAddr());
+    Addr addr = pkt->getAddr();
+
+    std::cout << "Trying to access memory at: " << addr << std::endl;
+    if (addr == 0x10000000 && pkt->isRead()) {
+        // Fabricate a response
+        uint64_t result = 2333; // or anything useful
+        std::memcpy(pkt->getPtr<uint8_t>(), &result, sizeof(result));
+        pkt->makeResponse();
+        return true;
+    }
 
     // we should not get a new request after committing to retry the
     // current one, but unfortunately the CPU violates this rule, so
@@ -184,7 +194,7 @@ AddrRange
 CohortEngine::getAddrRange() const
 {
     // Return a fake, unused, non-overlapping range (e.g., very high)
-    return AddrRange(0xFFFF0000, 0xFFFF0000 + 1);
+    return AddrRange(0x1000000, 0x1FFFFFFF);
 }
 
 void

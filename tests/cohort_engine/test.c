@@ -1,9 +1,12 @@
 // test_cohort.c
+#include <stdio.h>
 #include <stdint.h>
 #include <stddef.h>
+#include <sys/mman.h>
+#include <unistd.h>
 
-#define QUEUE_ADDR 0x90000000
-
+#define QUEUE_ADDR 0x10000000
+#define SIZE 0x0F000000 
 /*
 typedef struct {
     uint64_t head;
@@ -64,14 +67,24 @@ int cohort_unregister(int acc_id, fifo_t *acc_in, fifo_t *acc_out) {
 
 int main() {
 
+    void *mapped = mmap(QUEUE_ADDR, SIZE,
+                        PROT_READ | PROT_WRITE,
+                        MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED,
+                        -1, 0);
+
+    if (mapped == MAP_FAILED) {
+        perror("mmap failed");
+        return 1;
+    }
+
      
 
-    //volatile uint64_t *queue = (uint64_t *)QUEUE_ADDR;
+    volatile uint64_t *queue = (uint64_t *)QUEUE_ADDR;
 
     printf("Writing to Cohort queue...\n");
-    //queue[0] = 0x12345678abcdef00;
+    queue[0] = 0x12345678abcdef00;
 
-    //printf("Reading from Cohort queue: 0x%lx\n", queue[0]);
+    printf("Reading from Cohort queue: 0x%lx\n", queue[0]);
      /*
      // Initialize input and output queues
      fifo_t *in_queue = fifo_init(sizeof(uint64_t), 8);
