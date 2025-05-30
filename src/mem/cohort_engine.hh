@@ -168,6 +168,7 @@ class CohortEngine : public ClockedObject
     Addr vqueueBaseAddr = 0;
     Addr outqueueBaseAddr = 0;
     Addr voutqueueBaseAddr = 0;
+    Addr acclBaseAddr = 0;
     unsigned queueEntrySize = sizeof(uint64_t);
     unsigned queueLength = 64;
     unsigned headIndex = 0;

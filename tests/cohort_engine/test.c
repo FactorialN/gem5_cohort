@@ -9,6 +9,7 @@
 #define SIZE 0x0FFFFFFF 
 #define COMPUTE_QUEUE_ADDR 0x10000000
 #define RESULT_QUEUE_ADDR 0x11000000
+#define COHORT_REGISTRATION_ADDR 0x12000000
 
 
 typedef struct {
@@ -70,11 +71,6 @@ uint64_t pop(fifo_t *q) {
     return val;
 }
 
-/*
-int fifo_deinit(fifo_t *q) {
-    // no-op in SE mode
-    return 0;
-}
 
 typedef struct {
     uint64_t acc_id;
@@ -82,11 +78,10 @@ typedef struct {
     uint64_t out_addr;
 } cohort_registration_t;
 
-#define COHORT_REGISTRATION_ADDR 0x9000F000
-
 int cohort_register(int acc_id, fifo_t *acc_in, fifo_t *acc_out) {
     cohort_registration_t *entry = (cohort_registration_t *) COHORT_REGISTRATION_ADDR;
     entry->acc_id = acc_id;
+    printf("ACC ID ADDR %p\n", (void *)&entry->acc_id);
     entry->in_addr = (uint64_t) acc_in;
     entry->out_addr = (uint64_t) acc_out;
     return 0;
@@ -97,7 +92,6 @@ int cohort_unregister(int acc_id, fifo_t *acc_in, fifo_t *acc_out) {
     entry->acc_id = 0;
     return 0;
 }
-*/
 
 int main() {
 
@@ -125,6 +119,8 @@ int main() {
     fifo_t *out_queue = fifo_init(sizeof(uint64_t), 32, RESULT_QUEUE_ADDR);  // Optional if your engine returns results
     print_fifo(in_queue);
 
+    cohort_register(1, in_queue, out_queue);
+
     push(45, in_queue);
     push(48, in_queue);
     push(10086, in_queue);
@@ -136,6 +132,8 @@ int main() {
     while((*(out_queue->head))<(*(out_queue->tail))){
         printf("Poping from Cohort out queue: 0x%lx\n", pop(out_queue));
     }
+
+    cohort_unregister(1, in_queue, out_queue);
     
      /*
      // Register with cohort engine

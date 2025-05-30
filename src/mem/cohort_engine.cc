@@ -145,6 +145,7 @@ CohortEngine::init()
     vqueueBaseAddr = 0x10000000;
     outqueueBaseAddr = 0x86000;
     voutqueueBaseAddr = 0x11000000;
+    acclBaseAddr = 0x87000;
 
     pendingRequests.clear();
 }
@@ -281,15 +282,16 @@ CohortEngine::getAddrRange() const
 
 void
 CohortEngine::processEntry(uint64_t val){
-    std::cout << "Processing Acclerator with value " << val << std::endl;
-    uint64_t outhead, outtail;
+    
+    uint64_t outhead, outtail, acc;
     //readFromMemory(outqueueBaseAddr, &outhead, sizeof(outhead));
     readFromMemory(outqueueBaseAddr+8, &outtail, sizeof(outtail));
-
+    readFromMemory(acclBaseAddr, &acc, sizeof(acc));
     Addr dataAddr = outtail-voutqueueBaseAddr+outqueueBaseAddr ;
 
     // Advance tail
-    val+=1;
+    std::cout << "Processing Acclerator " << acc << " with value " << val << std::endl;
+    val+=acc;
     outtail+=8;
     std::cout << "[Cohort] Pushed value: 0x" << std::hex << val << " " << dataAddr  << " " << outtail << std::endl;
     writeAddr(dataAddr, val);
