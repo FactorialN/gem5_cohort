@@ -119,7 +119,7 @@ int main() {
     fifo_t *out_queue = fifo_init(sizeof(uint64_t), 32, RESULT_QUEUE_ADDR);  // Optional if your engine returns results
     //print_fifo(in_queue);
 
-    cohort_register(1, in_queue, out_queue);
+    cohort_register(12, in_queue, out_queue);
 
     push(45, in_queue);
     push(48, in_queue);
