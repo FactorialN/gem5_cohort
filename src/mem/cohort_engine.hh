@@ -198,6 +198,7 @@ class CohortEngine : public ClockedObject
     Tick tick();
     bool readAddr(Addr addr);
     bool writeAddr(Addr addr, uint64_t data);
+    bool readFromMemory(Addr addr, void *buf, int size);
 };
 
 } // namespace memory

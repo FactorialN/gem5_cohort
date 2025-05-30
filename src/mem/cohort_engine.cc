@@ -78,18 +78,52 @@ CohortEngine::getPort(const std::string &if_name, PortID idx)
     }
 }
 
+bool
+CohortEngine::readFromMemory(Addr addr, void *buf, int size)
+{
+    Request::Flags flags;
+    auto req = std::make_shared<Request>(addr, size, flags, requestorId);
+    PacketPtr pkt = new Packet(req, MemCmd::ReadReq);
+    pkt->dataStatic(buf);  // This sets where the read value goes
+
+    // Functional access directly calls target memory
+    req_port.sendFunctional(pkt);
+
+    delete pkt;
+    return true;
+}
+
+
 
 Tick CohortEngine::tick()
 {
     uint64_t data = 0;
     //PortProxy memProxy(req_port, system->getCacheLineSize());
     //memProxy.readBlob(queueBaseAddr, &data, sizeof(data));
-    DPRINTF(Drain, "Read value: 0x%016lx\n", data);
+    //DPRINTF(Drain, "Read value: 0x%016lx\n", data);
     // this 
 
     // req_port -> fixed address in memory -> check address
     // read state
-    readAddr(queueBaseAddr);
+    uint64_t inhead, intail;
+    readFromMemory(queueBaseAddr, &inhead, sizeof(inhead));
+    readFromMemory(queueBaseAddr+8, &intail, sizeof(intail));
+
+    if (inhead < intail) {
+        // queue is not empty
+
+        // Compute pop address
+        Addr dataAddr = (inhead-0x10000010)+queueBaseAddr+16;
+
+        uint64_t value;
+        readFromMemory(dataAddr, &value, sizeof(value));
+
+        std::cout << "[Cohort] Popped value: 0x" << std::hex << value << " " << dataAddr << " " << inhead << " " << intail << std::endl;
+        processEntry(value);
+        // Advance head
+        inhead+=8;
+        writeAddr(queueBaseAddr, inhead);
+    }
 
 
     schedule(tickEvent, curTick() + 10000);
@@ -234,32 +268,13 @@ CohortEngine::getAddrRange() const
 
 void
 CohortEngine::processEntry(uint64_t val){
-    //std::cout << "Processing Entry with value " << val << std::endl;
-    if (val == 42){
-        writeAddr(queueBaseAddr, 43);
-    }
+    std::cout << "Processing Acclerator with value " << val << std::endl;
 }
 
 bool
 CohortEngine::recvTimingResp(PacketPtr pkt)
 {
     uint64_t val = pkt->getLE<uint64_t>();
-    if(pkt->getAddr() != queueBaseAddr) std::cout << "[Cohort] Got data from physical address: 0x" << std::hex << pkt->getAddr() << std::endl;
-
-    //DPRINTF(Cohort, "CohortEngine received value from queue: %lu\n", val);
-    //std::cout << "Received Reading Result "<< val << std::endl;
-    // You could simulate processing here
-    if (val == 0) {
-        //DPRINTF(Cohort, "Queue is empty.\n");
-    } else {
-        //DPRINTF(Cohort, "Queue has data: %lu\n", val);
-
-        // 🟢 PROCESS WORK ITEM
-        processEntry(val);
-
-        // 🟢 (Optional) Mark slot as empty
-        // clearQueueSlot(currentEntryAddress);
-    }
 
     delete pkt;
     return true;
