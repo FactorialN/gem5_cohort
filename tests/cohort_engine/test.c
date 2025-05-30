@@ -64,6 +64,12 @@ void push(uint64_t element, fifo_t *q) {
     *(q->tail) += 8;
 }
 
+uint64_t pop(fifo_t *q) {
+    uint64_t val = *((volatile uint64_t *)(*(q->head)));
+    *(q->head) += 8;
+    return val;
+}
+
 /*
 int fifo_deinit(fifo_t *q) {
     // no-op in SE mode
@@ -126,6 +132,10 @@ int main() {
 
     print_fifo(in_queue);
     print_fifo(out_queue);
+
+    while((*(out_queue->head))<(*(out_queue->tail))){
+        printf("Poping from Cohort out queue: 0x%lx\n", pop(out_queue));
+    }
     
      /*
      // Register with cohort engine

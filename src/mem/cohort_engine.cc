@@ -176,7 +176,8 @@ CohortEngine::writeAddr(Addr addr, uint64_t data) {
 
     // 2. Allocate a write packet
     PacketPtr pkt = new Packet(req, MemCmd::WriteReq);
-    pkt->dataStatic(&data); // You can use dataDynamic if you want to allocate internally
+    uint64_t *data_copy = new uint64_t(data);
+    pkt->dataStatic(data_copy); // You can use dataDynamic if you want to allocate internally
 
     // 3. Send the request
     if (!pendingRequests.empty()) {
