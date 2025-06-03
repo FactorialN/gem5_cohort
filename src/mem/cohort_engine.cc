@@ -60,7 +60,6 @@ CohortEngine::CohortEngine(const CohortEngineParams &p) :
     retryReq(false),
     releaseEvent([this]{ release(); }, name()),
     req_port(name() + ".req_port", *this),
-    pollEvent([this]{ pollQueue(); }, name()),
     tickEvent([this]{ tick();}, name()),
     requestorId(0)
     //system(p.system)
@@ -126,7 +125,7 @@ Tick CohortEngine::tick()
     }
 
 
-    schedule(tickEvent, curTick() + 10000);
+    schedule(tickEvent, curTick() + pollingInterval);
 
     // Only tick once for now
     return MaxTick;
@@ -307,33 +306,6 @@ CohortEngine::recvTimingResp(PacketPtr pkt)
     delete pkt;
     return true;
 }
-
-void
-CohortEngine::pollQueue()
-{
-    if (headIndex >= queueLength)
-        headIndex = 0;
-
-    Addr entryAddr = queueBaseAddr + headIndex * queueEntrySize;
-
-    // Build and send memory read request
-    RequestPtr req = std::make_shared<Request>(
-        entryAddr, queueEntrySize, Request::UNCACHEABLE, requestorId);
-    PacketPtr pkt = new Packet(req, MemCmd::ReadReq);
-    pkt->allocate();
-
-    if (!req_port.sendTimingReq(pkt)) {
-        retryPkt = pkt;
-        return;
-    }
-
-    // Next time we poll, advance head
-    headIndex++;
-
-    // Reschedule next polling event
-    schedule(pollEvent, curTick() + pollingInterval);
-}
-
 
 void
 CohortEngine::release()

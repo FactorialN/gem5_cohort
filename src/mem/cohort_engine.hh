@@ -172,7 +172,6 @@ class CohortEngine : public ClockedObject
     unsigned queueEntrySize = sizeof(uint64_t);
     unsigned queueLength = 64;
     unsigned headIndex = 0;
-    EventFunctionWrapper pollEvent;
     Tick pollingInterval = 10000;
 
     //System *system;
@@ -198,7 +197,6 @@ class CohortEngine : public ClockedObject
     void recvRespRetry();
     void recvReqRetry();  // For memory request retry handling
     PacketPtr buildReadRequest(Addr addr, unsigned size);
-    void pollQueue();
     AddrRange getAddrRange() const;
     void processEntry(uint64_t val);
     Tick tick();
