@@ -135,22 +135,5 @@ int main() {
 
     cohort_unregister(1, in_queue, out_queue);
     
-     /*
-     // Register with cohort engine
-     cohort_register(1, in_queue, out_queue);
- 
-     // Push some tasks
-     for (uint64_t i = 0; i < 5; ++i) {
-         push(i * 10, in_queue);
-     }
- 
-     // Keep simulation running
-     while (1);
- 
-     // (Unregister is unreachable but shows cleanup API)
-     cohort_unregister(1, in_queue, out_queue);
-     fifo_deinit(in_queue);
-     fifo_deinit(out_queue);
-    */
      return 0;
 }
