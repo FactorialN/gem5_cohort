@@ -4,12 +4,14 @@
 #include <stddef.h>
 #include <sys/mman.h>
 #include <unistd.h>
+#include <time.h>
 
 #define QUEUE_ADDR 0x10000000
 #define SIZE 0x0FFFFFFF 
 #define COMPUTE_QUEUE_ADDR 0x10000000
 #define RESULT_QUEUE_ADDR 0x11000000
 #define COHORT_REGISTRATION_ADDR 0x12000000
+#define QUEUE_CAPACITY 32
 
 
 typedef struct {
@@ -71,6 +73,9 @@ uint64_t pop(fifo_t *q) {
     return val;
 }
 
+uint64_t size(fifo_t *q) {
+    return (*(q->tail))-(*(q->head));
+}
 
 typedef struct {
     uint64_t acc_id;
@@ -93,6 +98,25 @@ int cohort_unregister(int acc_id, fifo_t *acc_in, fifo_t *acc_out) {
     return 0;
 }
 
+typedef struct {
+    uint64_t value;
+    uint64_t tick;
+} entry_t;
+
+uint64_t get_tick() {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
+    return ts.tv_sec * 1000000000ULL + ts.tv_nsec;
+}
+
+void fake_sleep(uint64_t delay_ns) {
+    uint64_t start = get_tick();
+    while (get_tick() - start < delay_ns) {
+        // spin
+    }
+}
+
+
 int main() {
 
     void *mapped = mmap(QUEUE_ADDR, SIZE,
@@ -106,34 +130,37 @@ int main() {
     }
 
      
-
-    volatile uint64_t *queue = (uint64_t *)QUEUE_ADDR;
-
-    printf("Writing to Cohort queue...\n");
-    queue[0] = 42;
-
-    printf("Reading from Cohort queue: 0x%lx\n", queue[0]);
-     
-     // Initialize input and output queues
-    fifo_t *in_queue = fifo_init(sizeof(uint64_t), 32, COMPUTE_QUEUE_ADDR);
-    fifo_t *out_queue = fifo_init(sizeof(uint64_t), 32, RESULT_QUEUE_ADDR);  // Optional if your engine returns results
-    //print_fifo(in_queue);
+    fifo_t *in_queue = fifo_init(sizeof(entry_t), QUEUE_CAPACITY, COMPUTE_QUEUE_ADDR);
+    fifo_t *out_queue = fifo_init(sizeof(entry_t), QUEUE_CAPACITY, RESULT_QUEUE_ADDR);
 
     cohort_register(12, in_queue, out_queue);
 
-    push(45, in_queue);
-    push(48, in_queue);
-    push(10086, in_queue);
-    push(10492, in_queue);
+    uint64_t input_values[] = {45, 48, 10086, 10492, 114514};
+    int num_values = sizeof(input_values) / sizeof(input_values[0]);
 
-    //print_fifo(in_queue);
-    //print_fifo(out_queue);
-
-    while((*(out_queue->head))<(*(out_queue->tail))){
-        printf("Poping from Cohort out queue: 0x%lx\n", pop(out_queue));
+    for (int i = 0; i < num_values; ++i) {
+        entry_t e;
+        e.value = input_values[i];
+        e.tick = get_tick();
+        push(e.value, in_queue);
+        printf("Pushed 0x%lx at tick %lu\n", e.value, e.tick);
+        fake_sleep(50000);  // simulate ~50ms delay between pushes
     }
 
-    cohort_unregister(1, in_queue, out_queue);
+    int received = 0;
+    while (received < num_values) {
+        if (size(out_queue) > 0) {
+            entry_t result;
+            result.value = pop(out_queue);
+            result.tick = get_tick();
+            printf("Received 0x%lx | Latency: %lu ns\n", result.value, result.tick);
+            ++received;
+        } else {
+            fake_sleep(1000);  // 1ms polling
+        }
+    }
+
+    cohort_unregister(12, in_queue, out_queue);
     
-     return 0;
+    return 0;
 }
