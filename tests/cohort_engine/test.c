@@ -138,28 +138,34 @@ int main() {
     uint64_t input_values[] = {45, 48, 10086, 10492, 114514};
     int num_values = sizeof(input_values) / sizeof(input_values[0]);
 
+    entry_t e[num_values], result[num_values];
+
     for (int i = 0; i < num_values; ++i) {
-        entry_t e;
-        e.value = input_values[i];
-        e.tick = get_tick();
-        push(e.value, in_queue);
-        printf("[Software Consumer] Pushed 0x%lx at tick %lu\n", e.value, e.tick);
+        e[i].value = input_values[i];
+        e[i].tick = get_tick();
+        push(e[i].value, in_queue);
+        printf("[Software Consumer] Pushed 0x%lx at tick %lu\n", e[i].value, e[i].tick);
         fake_sleep(50000);  // simulate ~50ms delay between pushes
     }
 
     int received = 0;
+    uint64_t total = 0, min = UINT64_MAX, max = 0;
     while (received < num_values) {
-        if (size(out_queue) > 0) {
-            entry_t result;
-            result.value = pop(out_queue);
-            result.tick = get_tick();
-            printf("[Software Producer] Received 0x%lx | Latency: %lu ns\n", result.value, result.tick);
+        if (size(out_queue) > 0) {         
+            result[received].value = pop(out_queue);
+            result[received].tick = get_tick();
+            uint64_t latency = result[received].tick - e[received].tick;
+            printf("[Software Producer] Received 0x%lx | Latency: %lu ns\n", result[received].value, latency);
+            total += latency;
+            if (latency < min) min = latency;
+            if (latency > max) max = latency;
             ++received;
         } else {
             fake_sleep(1000);  // 1ms polling
         }
     }
 
+    printf("Latency (ticks): min=%lu max=%lu avg=%lu\n", min, max, total / num_values);
     cohort_unregister(12, in_queue, out_queue);
     
     return 0;
