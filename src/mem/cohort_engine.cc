@@ -117,7 +117,7 @@ Tick CohortEngine::tick()
         uint64_t value;
         readFromMemory(dataAddr, &value, sizeof(value));
 
-        std::cout << "[Cohort Consumer] Popped value: 0x" << std::hex << value << " " << dataAddr << " " << inhead << " " << intail << std::endl;
+        std::cout << "[Cohort Consumer] Tick:" << curTick() <<" Popped value: 0x" << std::hex << value << " " << dataAddr << " " << inhead << " " << intail << std::endl;
         processEntry(value);
         // Advance head
         inhead+=8;
@@ -288,10 +288,10 @@ CohortEngine::processEntry(uint64_t val){
     Addr dataAddr = outtail-voutqueueBaseAddr+outqueueBaseAddr ;
 
     // Advance tail
-    std::cout << "[Accelerator] Processing Acclerator " << acc << " with value " << val << std::endl;
+    std::cout << "[Accelerator] Tick:" << curTick() <<" Processing Acclerator " << acc << " with value " << val << std::endl;
     val+=acc;
     outtail+=8;
-    std::cout << "[Cohort Producer] Pushed value: 0x" << std::hex << val << " " << dataAddr  << " " << outtail << std::endl;
+    std::cout << "[Cohort Producer] Tick:" << curTick() <<" Pushed value: 0x" << std::hex << val << " " << dataAddr  << " " << outtail << std::endl;
     writeAddr(dataAddr, val);
     writeAddr(outqueueBaseAddr + 8, outtail);
 
