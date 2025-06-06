@@ -117,7 +117,7 @@ Tick CohortEngine::tick()
         uint64_t value;
         readFromMemory(dataAddr, &value, sizeof(value));
 
-        std::cout << "[Cohort] Popped value: 0x" << std::hex << value << " " << dataAddr << " " << inhead << " " << intail << std::endl;
+        std::cout << "[Cohort Consumer] Popped value: 0x" << std::hex << value << " " << dataAddr << " " << inhead << " " << intail << std::endl;
         processEntry(value);
         // Advance head
         inhead+=8;
@@ -199,12 +199,11 @@ CohortEngine::startup()
     // Now it's safe to schedule memory access
     ClockedObject::startup();
     //requestorId = SimObject::getRequestorId(this);
-    std::cout << "Starting Cohort Engine "<< std::endl;
-    std::cout << "Current RequestorID for is "<< requestorId << std::endl;
+    std::cout << "[Cohort] Starting Cohort Engine "<< std::endl;
+    std::cout << "[Cohort] Current RequestorID for is "<< requestorId << std::endl;
 
     schedule(tickEvent, curTick() + 1000);
     readAddr(queueBaseAddr);
-    std::cout << "Started Cohort Engine "<< std::endl;
 }
 
 
@@ -289,10 +288,10 @@ CohortEngine::processEntry(uint64_t val){
     Addr dataAddr = outtail-voutqueueBaseAddr+outqueueBaseAddr ;
 
     // Advance tail
-    std::cout << "Processing Acclerator " << acc << " with value " << val << std::endl;
+    std::cout << "[Accelerator] Processing Acclerator " << acc << " with value " << val << std::endl;
     val+=acc;
     outtail+=8;
-    std::cout << "[Cohort] Pushed value: 0x" << std::hex << val << " " << dataAddr  << " " << outtail << std::endl;
+    std::cout << "[Cohort Producer] Pushed value: 0x" << std::hex << val << " " << dataAddr  << " " << outtail << std::endl;
     writeAddr(dataAddr, val);
     writeAddr(outqueueBaseAddr + 8, outtail);
 

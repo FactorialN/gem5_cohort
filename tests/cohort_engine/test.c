@@ -86,7 +86,7 @@ typedef struct {
 int cohort_register(int acc_id, fifo_t *acc_in, fifo_t *acc_out) {
     cohort_registration_t *entry = (cohort_registration_t *) COHORT_REGISTRATION_ADDR;
     entry->acc_id = acc_id;
-    printf("ACC ID ADDR %p\n", (void *)&entry->acc_id);
+    printf("[Cohort] ACC ID ADDR %p\n", (void *)&entry->acc_id);
     entry->in_addr = (uint64_t) acc_in;
     entry->out_addr = (uint64_t) acc_out;
     return 0;
@@ -143,7 +143,7 @@ int main() {
         e.value = input_values[i];
         e.tick = get_tick();
         push(e.value, in_queue);
-        printf("Pushed 0x%lx at tick %lu\n", e.value, e.tick);
+        printf("[Software Consumer] Pushed 0x%lx at tick %lu\n", e.value, e.tick);
         fake_sleep(50000);  // simulate ~50ms delay between pushes
     }
 
@@ -153,7 +153,7 @@ int main() {
             entry_t result;
             result.value = pop(out_queue);
             result.tick = get_tick();
-            printf("Received 0x%lx | Latency: %lu ns\n", result.value, result.tick);
+            printf("[Software Producer] Received 0x%lx | Latency: %lu ns\n", result.value, result.tick);
             ++received;
         } else {
             fake_sleep(1000);  // 1ms polling
